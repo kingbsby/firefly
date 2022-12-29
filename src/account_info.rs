@@ -83,7 +83,7 @@ impl Contract{
         vec_friend
     }
 
-    pub fn add_friend(&mut self, friend_account_id: AccountId) -> Friend{
+    pub fn add_friend(&mut self, friend_account_id: AccountId) -> bool{
         let account_id = env::signer_account_id();
         // Calculate the value of topic (hash of account_id and friend_account_id)
         let mut concat_str = account_id.to_string();
@@ -95,14 +95,7 @@ impl Contract{
         self.add_friend_to_account(&account_id, &friend_account_id, &hash_str);
         self.add_friend_to_account(&friend_account_id, &account_id, &hash_str);
         
-        let friend_info = self.accounts().get(&friend_account_id).expect("can not find the friend account '{friend_account_id}'");
-        Friend {
-            account_id: friend_account_id, 
-            name: friend_info.name, 
-            image: friend_info.image, 
-            topic: hash_str,  
-            hash: friend_info.hash,
-        }
+        true
     }
 
     fn add_friend_to_account(&mut self, account_id: &AccountId, friend_account_id: &AccountId, topic: &String) {
@@ -181,8 +174,8 @@ mod tests {
         let result = contract.add_friend(AccountId::try_from("wx.testnet".to_string()).unwrap());
 
         assert_eq!(
-            result.name,
-            "wangxin".to_string()
+            result,
+            true
         );
     }
 
