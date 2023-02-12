@@ -3,6 +3,7 @@ pub use crate::*;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{UnorderedMap};
 use near_sdk::{env, AccountId};
+use near_sdk::serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
@@ -11,6 +12,15 @@ pub struct AccountInfo {
     pub name: String,
     pub image: String,
     pub friends: UnorderedMap<AccountId, String>,
+    pub hash: String,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct AccountInfoJson {
+    pub account_id: AccountId,
+    pub name: String,
+    pub image: String,
     pub hash: String,
 }
 
@@ -58,6 +68,12 @@ impl Contract{
         vec![account_info.name, account_info.image]
     }
 
+    pub fn account_info(&self, account_id: AccountId) -> (String, String) {
+        assert!(self.accounts().contains_key(&account_id), "Account {0} not registered", &account_id);
+        let account_info = self.accounts.get(&account_id).unwrap();
+        (account_info.name, account_info.image)
+    }
+
     pub fn get_friend_list(&self, account_id: AccountId) ->  Vec<Friend>{
         println!("get_friend_list account id {}", account_id);
         assert!(self.accounts().contains_key(&account_id), "Account {account_id} not registered");
@@ -83,7 +99,7 @@ impl Contract{
         vec_friend
     }
 
-    pub fn add_friend(&mut self, friend_account_id: AccountId) -> bool{
+    pub fn add_friend(&mut self, friend_account_id: AccountId) -> AccountInfoJson{
         let account_id = env::signer_account_id();
         // Calculate the value of topic (hash of account_id and friend_account_id)
         let mut concat_str = account_id.to_string();
@@ -95,7 +111,13 @@ impl Contract{
         self.add_friend_to_account(&account_id, &friend_account_id, &hash_str);
         self.add_friend_to_account(&friend_account_id, &account_id, &hash_str);
         
-        true
+        let friend_info = self.accounts().get(&friend_account_id).unwrap();
+        AccountInfoJson {
+            account_id: friend_account_id,
+            name: friend_info.name,
+            image: friend_info.image,
+            hash: friend_info.hash,
+        }
     }
 
     fn add_friend_to_account(&mut self, account_id: &AccountId, friend_account_id: &AccountId, topic: &String) {
@@ -173,10 +195,9 @@ mod tests {
 
         let result = contract.add_friend(AccountId::try_from("wx.testnet".to_string()).unwrap());
 
-        assert_eq!(
-            result,
-            true
-        );
+        assert_eq!(result.account_id.to_string(), "wx.testnet".to_string());
+        assert_eq!(result.name, "wangxin".to_string());
+        assert_eq!(result.image, "http://wx.jpg".to_string());
     }
 
     #[test]
